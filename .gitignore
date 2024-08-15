@@ -6,9 +6,7 @@
 #[Jj]ustfile
 
 # will have compiled files and executables
-bin
-bin/bunwarmer
-bunwarmer
+bin/
 
 debug/
 target/
@@ -19,12 +17,12 @@ target/
 /llvm/
 /mingw-build/
 build/
-!/compiler/rustc_mir_build/src/build/
-/build-rust-analyzer/
-/dist/
-/unicode-downloads
-/src/bootstrap/target
-/src/tools/x/target
+#!/compiler/rustc_mir_build/src/build/
+#/build-rust-analyzer/
+#/dist/
+#/unicode-downloads
+#/src/bootstrap/target
+#/src/tools/x/target
 # Created by default with `src/ci/docker/run.sh`
 /obj/
 
@@ -47,7 +45,7 @@ Cargo.lock
 rust-project.json
 
 ## Rustdoc GUI tests
-tests/rustdoc-gui/src/**.lock
+#tests/rustdoc-gui/src/**.lock
 
 ### Node
 node_modules
