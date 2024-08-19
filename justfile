@@ -1,90 +1,84 @@
 #!/usr/bin/env just --justfile
 # vim:set ft=just ts=2 sts=4 sw=2 et:
 
-# https://github.com/casey/just#settings
-#set allow-duplicate-recipes
-#set dotenv-load
-#set export
+# justfile requires https://github.com/casey/just
+# settings: https://github.com/casey/just#settings
+set allow-duplicate-recipes := false
+# Load environment variables from `.env` file.
+set dotenv-load := true
+set export := false
 #set positional-arguments
-#set shell := ["bash", "-c"]
+#set shell := ["bash", "-euo", "pipefail", "-c"]
+set shell := ["bash", "-c"]
+
+timestamp := `date +%s`
+semver := env_var('PROJECT_VERSION')
+commit := `git show -s --format=%h`
+version := semver + "+" + commit
 
 # Default recipe to run when just is called without arguments
 
-# lists the tasks
+# call 'just' to get help
+#default:
+#  @just --list --justfile {{justfile()}}
+
+# lists the tasks and variables in the justfile
 @_list:
-    just --list
+  just --justfile ./justfile --list --unsorted
+  echo ""
+  echo "Available variables:"
+  just --evaluate | sed 's/^/    /'
+  echo ""
+  echo "Override variables using 'just key=value ...' (also ALL_UPPERCASE ones)"
 
 help:
-    @just --list
+  @just --justfile ./justfile --list
 
-new:
-    cargo new bunwarmer
+# Evaluate and return all just variables
+evaluate:
+  @just --evaluate
 
-# Build the project
-build:
-    cargo build --release && cp target/release/bunwarmer bin/bunwarmer
-
-docker-build:
-    docker build -t bunwarmer .
-
-# Run tests
-test:
-    cargo test
+# Return system information (e.g. os, architecture, etc)
+system-info:
+  @echo "architecture: {{arch()}}"
+  @echo "os: {{os()}}"
+  @echo "os family: {{os_family()}}"
 
 # Run clippy for linting
-lint:
-    cargo clippy -- -D warnings
+alias lint := lint-rust
+lint-rust:
+  @echo "Linting source code .."
+  cargo clippy -- -D warnings
 
-# Format code
+# Run `cargo fmt` to format source code
 format:
-    cargo fmt
+  @echo "Formatting source code .."
+  cargo fmt
 
 # Check formatting
 check-format:
-    cargo fmt -- --check
+  cargo fmt -- --check
+
+# Full check: format, lint, and test
+check: format lint-rust test
+  @echo "All checks passed!"
+
+# Continuous integration tasks
+ci: check-format lint-rust test audit
+  @echo "CI tasks completed successfully!"
+
+# Security audit
+audit:
+  cargo audit
 
 # Clean build artifacts
 clean:
-    cargo clean
-    test -f bin/bunwarmer && rm -f bin/bunwarmer
+  cargo clean
+  #test -f bin/bunwarmer && rm -f bin/bunwarmer
 
-# Adaptive Block Size: If the user doesn't specify a block size (or specifies 0),
-# the program will choose a block size based on the volume size. This is a simplified
-# heuristic and could be expanded to consider the actual EBS volume type.
-#
-# This would use a 256 KiB block size, which is optimal for SSD volumes.
-# sudo ./bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 0 --benchmark --max-retries 5
-# cargo run --release -- --devices /dev/nvme0n1:gp3,/dev/nvme1n1:gp3 --workers 8 --blocksize 0 --benchmark --max-retries 5
-# cargo run --release -- --devices /dev/nvme0n1,/dev/nvme1n1 --workers 8 --blocksize 0 --benchmark --max-retries 5 --aws-access-key-id YOUR_ACCESS_KEY --aws-secret-access-key YOUR_SECRET_KEY --aws-region us-east-1
-# sudo ./bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 262144 --benchmark --max-retries 5
-
-# Run on Linux (example)
-run-linux:
-  bin/bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 0 --benchmark
-
-# Run on macOS (example)
-run-macos:
-  bin/bunwarmer --devices /dev/rdisk5:gp3 --workers 8 --blocksize 0 --benchmark --use-mmap
-
-# Note: The --privileged flag is used because your tool needs direct access to devices.
-# Be cautious with this in production environments.
-docker-run-linux:
-  docker run --privileged bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 0 --benchmark
-
-# Full check: format, lint, and test
-check: format lint test
-  @echo "All checks passed!"
-
-# Build and run (for Linux)
-build-and-run-linux: build
-  just run-linux
-
-# Build and run (for macOS)
-build-and-run-macos: build
-  just run-macos
-
-docker-build-and-run-linux: docker-build
-  just docker-run-linux
+# Run tests
+test:
+  cargo test
 
 # Generate documentation
 doc:
@@ -98,10 +92,74 @@ update:
 outdated:
   cargo outdated
 
-# Security audit
-audit:
-  cargo audit
+fetch:
+	cargo run --release -- fetch
 
-# Continuous integration tasks
-ci: check-format lint test audit
-  @echo "CI tasks completed successfully!"
+analyze:
+	cargo run --release -- analyze
+
+new:
+  cargo new bunwarmer
+
+# Build the project
+build:
+  cargo build --release && cp target/release/bunwarmer bin/bunwarmer
+
+# Build and run (for Linux)
+build-and-run-linux: build
+  just run-linux
+
+# Run on Linux (example)
+run-linux:
+  bin/bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 0 --benchmark
+
+# Build and run (for macOS)
+build-and-run-macos: build
+  just run-macos
+
+# Run on macOS (example)
+run-macos:
+  bin/bunwarmer --devices /dev/rdisk5:gp3 --workers 8 --blocksize 0 --benchmark --use-mmap
+
+docker-image-create:
+  @echo "Creating a docker image ..."
+  #@PROJECT_VERSION={{version}} ./make_image.sh
+  docker build -f Dockerfile -t localhost/bunwarmer:0.1.0 .
+
+docker-image-run:
+  @echo "Running container from docker image ..."
+  docker run --rm -it --rm localhost/bunwarmer:0.1.0
+  #docker run --pull always --rm -it --rm -v $(pwd):/root localhost/bunwarmer:0.1.0
+
+#docker-run-help:
+#  docker run -ti --rm localhost/bunwarmer:0.1.0 --help
+
+# Note: The --privileged flag is used because your tool needs direct access to devices.
+# Be cautious with this in production environments.
+#docker-image-run-privileged:
+#  docker run --privileged bunwarmer --devices /dev/nvme0n1:gp3 --workers 8 --blocksize 0 --benchmark
+
+
+### docker-just ###
+
+DOCKER_CMD := "docker"
+BUILDER_NAME := "docker-just"
+BUILDER_PLATFORM := "linux/amd64"
+
+docker-builder-create:
+  {{ DOCKER_CMD }} buildx create \
+    --driver docker-container \
+    --name {{ BUILDER_NAME }} \
+    --platform {{ BUILDER_PLATFORM }} \
+    || true
+
+docker-builder-remove:
+  {{ DOCKER_CMD }}  buildx rm --keep-state {{ BUILDER_NAME }}
+
+docker-bake-image *OPTIONS: docker-builder-create && docker-builder-remove
+  {{ DOCKER_CMD }} buildx bake \
+    --builder {{ BUILDER_NAME }} \
+    --pull \
+    {{ OPTIONS }}
+
+docker-bake-push: (docker-bake-image "--push")

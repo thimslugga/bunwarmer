@@ -1,0 +1,20 @@
+---
+volumes:
+  bunwarmer-data:
+    driver: local
+
+networks:
+  bunwarmer:
+    driver: bridge
+
+services:
+  bunwarmer:
+    image: bunwarmer
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./src:/bunwarmer/src
+    #command: npm run dev
+    networks:
+      - bunwarmer

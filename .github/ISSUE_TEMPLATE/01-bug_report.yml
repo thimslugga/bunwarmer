@@ -1,0 +1,63 @@
+name: Bug report
+description: Report an unexpected issue
+labels: ["type:bug"]
+assignees: []
+body:
+  - type: markdown
+    content: |
+      ### Bug report
+
+      **Describe the bug**
+      A clear and concise description of what the bug is.
+
+      **To Reproduce**
+      Steps to reproduce the behavior:
+
+      1. Go to '...'
+      2. Click on '....'
+      3. Scroll down to '....'
+      4. See error
+
+      **Expected behavior**
+      A clear and concise description of what you expected to happen.
+
+      **Host (please complete the following information):**
+      - OS: [e.g. macOS, Linux, etc.]
+
+      **Additional context**
+      Add any other context about the problem here.
+
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: A clear and concise title that describes the bug
+      placeholder: Enter the title
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is
+      placeholder: Enter the description
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: The operating system where the bug was found
+      placeholder: Enter the OS
+
+  - type: input
+    id: host
+    attributes:
+      label: Host
+      description: The device where the bug was found
+      placeholder: Enter the device
+
+  - type: input
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context about the problem
+      placeholder: Enter the context

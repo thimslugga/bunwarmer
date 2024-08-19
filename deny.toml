@@ -1,0 +1,25 @@
+[licenses]
+confidence-threshold = 0.93
+
+allow = [
+    "Apache-2.0",
+    #"BSD-2-Clause", # OK but currently unused; commenting to prevent warning
+    "BSD-3-Clause",
+    "BSL-1.0",
+    #"CC0-1.0",  # OK but currently unused; commenting to prevent warning
+    "ISC",
+    "MIT",
+    "OpenSSL",
+    "Unlicense",
+    #"Zlib",  # OK but currently unused; commenting to prevent warning
+]
+
+[bans]
+# Deny multiple versions or wildcard dependencies.
+multiple-versions = "deny"
+wildcards = "deny"
+
+[sources]
+# Deny crates from unknown registries or git repositories.
+unknown-registry = "deny"
+unknown-git = "deny"

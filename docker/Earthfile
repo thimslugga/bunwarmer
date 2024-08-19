@@ -1,0 +1,86 @@
+VERSION --try 0.8
+# https://github.com/earthly/lib/tree/main/rust
+# Imports the library definition from default branch (in a real case, specify version or commit to guarantee immutability)
+IMPORT github.com/earthly/lib/rust AS rust
+#IMPORT github.com/earthly/lib/rust:3.0.1 AS rust
+
+#FROM rust:slim-bookworm
+#WORKDIR /bunwarmer
+
+#clean-target:
+#  DO rust+SET_CACHE_MOUNTS_ENV
+#  RUN --mount=$EARTHLY_RUST_TARGET_CACHE rm -rf target
+
+install:
+  FROM rust:1.80.0-bookworm
+  RUN apt-get update -qq
+  RUN apt-get install --no-install-recommends -qq autoconf autotools-dev libtool-bin clang cmake bsdmainutils
+  RUN cargo install --locked cargo-deny
+  RUN rustup component add clippy
+  RUN rustup component add rustfmt
+  # Call +INIT before copying the source file to avoid installing depencies every time source code changes.
+  # This parametrization will be used in future calls to functions of the library
+  DO rust+INIT --keep_fingerprints=true
+
+source:
+  FROM +install
+  COPY --keep-ts Cargo.toml Cargo.lock ./
+  COPY --keep-ts deny.toml ./
+  COPY --keep-ts --dir src ./
+  #COPY --keep-ts --dir src Cargo.lock Cargo.toml .
+
+# build builds with the Cargo release profile and creates the binary target/release/bunwarmer
+build:
+  FROM +source
+  # CARGO function adds caching to cargo runs.
+  # See https://github.com/earthly/lib/tree/main/rust
+  DO rust+CARGO --args="build --release --bin bunwarmer" --output="release/[^/\.]+"
+  #DO rust+CARGO --args="build --release" --output="release/[^/\.]+"
+  #SAVE ARTIFACT ./target/release/ target AS LOCAL artifact/target
+  SAVE ARTIFACT ./target/release/bunwarmer bunwarmer
+  #SAVE ARTIFACT target/release/bunwarmer bunwarmer
+
+# test executes all unit and integration tests via Cargo
+test:
+  FROM +source
+  DO rust+CARGO --args="test"
+
+# fmt checks whether Rust code is formatted according to style guidelines
+fmt:
+  FROM +source
+  DO rust+CARGO --args="fmt --check"
+
+# lint runs cargo clippy on the source code
+lint:
+  FROM +source
+  DO rust+CARGO --args="clippy --all-features --all-targets -- -D warnings"
+
+# check-dependencies lints our dependencies via `cargo deny`
+check-dependencies:
+  FROM +source
+  DO rust+CARGO --args="deny --all-features check --deny warnings bans license sources"
+
+# cross performs cross compilation
+#cross:
+  #FROM +source
+  #ARG --required target
+  #DO rust+SET_CACHE_MOUNTS_ENV
+  #DO rust+CROSS --target=$target
+  #DO rust+CROSS --target aarch64-unknown-linux-gnu
+  #DO rust+COPY_OUTPUT --output="release/[^\./]+" # Keep all the files in /target/release that don't have any extension.
+  #SAVE ARTIFACT target/$target AS LOCAL dist/$target
+
+# all runs all other targets in parallel
+#all:
+#  BUILD +lint
+#  BUILD +build
+#  BUILD +test
+#  BUILD +fmt
+#  BUILD +check-dependencies
+
+# docker creates docker image thimslugga/bunwarmer:latest
+docker:
+    FROM debian:bookworm-slim
+    COPY +build/bunwarmer bunwarmer
+    ENTRYPOINT ["./bunwarmer"]
+    SAVE IMAGE --push thimslugga/bunwarmer:latest

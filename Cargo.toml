@@ -1,33 +1,57 @@
 [package]
 name = "bunwarmer"
 version = "0.1.0"
-description = "Tool to pre-warm aka hydrate EBS volumes"
-repository = "https://github.com/thimslab/bunwarmer"
+description = "Tool to 'pre-warm' aka hydrate EBS volumes"
 authors = ["Adam Kaminski <adam@adamkaminski.com>"]
+repository = "https://github.com/thimslab/bunwarmer"
 readme = "README.md"
 license = "MIT"
-#build = "build.rs"
+#homepage = "https://github.com/thimslab/bunwarmer"
+#documentation = "https://github.com/thimslab/bunwarmer"
 categories = ["tools", "cloud"]
+keywords = ["AWS", "Amazon", "EBS", "snapshot"]
+#repository.workspace = true
+#edition.workspace = true
+#license.workspace = true
+#build = "build.rs"
 edition = "2021"
+rust-version = "1.80"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
 name = "bunwarmer"
-path = "src/bunwarmer/main.rs"
+path = "src/bin/bunwarmer/main.rs"
+test = false
+doc = false
 
 #[features]
+# This feature is for backward compatibility but has no effect.
+#default = ["aws-sdk-rust-rustls"]
+#aws-sdk-rust-rustls = [ "aws-config/rustls", "aws-sdk-ebs/rustls", "aws-sdk-ec2/rustls" ]
 
 [dependencies]
 libc = "0.2"
-clap = { version = "3.1.6", features = ["derive"] }
-tokio = { version = "1.0", features = ["full"] }
-indicatif = "0.16.2"
-#rusoto_core = "0.46.0"
-#rusoto_ec2 = "0.46.0"
-#rusoto_credential = "0.46.0"
+clap = { version = "4.5.16", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+indicatif = "0.17.8"
+
+#[target.'cfg(target_has_atomic = "64")'.dependencies]
+#tracing-chrome.workspace = true
+
+#[target.'cfg(unix)'.dependencies]
+#libc.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nix = "0.23.0"
+nix = { version = "0.29", features = ["fs"] }
+#nix = { version = "0.26.2", features = ["fs"] }
+#nix = { version = "0.28", default-features = false, features = ["ioctl"] }
+#cargo-credential-libsecret.workspace = true
+
+#[target.'cfg(target_os = "macos")'.dependencies]
+#cargo-credential-macos-keychain.workspace = true
 
 #[package.metadata.rust-analyzer]
+
+#[lints]
+#orkspace = true
